@@ -12,6 +12,7 @@ export async function createChallenge(formData: FormData) {
   const communityId = String(formData.get("community_id") ?? "");
   const challengedId = String(formData.get("challenged_id") ?? "");
 
+  if (!communityId || !challengedId) throw new Error("Choose a player to challenge.");
   if (challengedId === user.id) throw new Error("You cannot challenge yourself.");
 
   const { error } = await supabase.from("challenges").insert({
