@@ -12,7 +12,7 @@ export function CommunityCard({ community, joined = false }: { community: Commun
           <p className="mt-1 text-sm capitalize text-slate-500">{community.type.replace("_", " ")}</p>
         </div>
         <span className="rounded-full bg-orange-50 px-2.5 py-1 text-xs font-bold text-court">
-          {community.visibility === "public" ? "Public" : "Domain"}
+          {community.join_policy === "approval_required" ? "Approval" : community.visibility === "public" ? "Public" : "Domain"}
         </span>
       </div>
 
@@ -35,7 +35,7 @@ export function CommunityCard({ community, joined = false }: { community: Commun
         ) : (
           <div className="flex items-center gap-2">
             <UsersRound size={16} />
-            Open to join
+            {community.join_policy === "approval_required" ? "Admin approval required" : "Open to join"}
           </div>
         )}
       </div>
@@ -48,7 +48,10 @@ export function CommunityCard({ community, joined = false }: { community: Commun
           </button>
         </form>
       ) : (
-        <JoinCommunityButton communityId={community.id} />
+        <JoinCommunityButton
+          communityId={community.id}
+          requiresApproval={community.join_policy === "approval_required"}
+        />
       )}
     </article>
   );

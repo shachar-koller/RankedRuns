@@ -3,6 +3,7 @@
 import Link from "next/link";
 import * as React from "react";
 import { Search } from "lucide-react";
+import { createChallenge } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
 import { formatRecord } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/lib/types";
@@ -21,12 +22,17 @@ const sortOptions: Array<{ value: SortKey; label: string }> = [
 export function PlayersBrowser({
   entries,
   currentUserId,
+  communityId,
+  activeOpponentIds = [],
 }: {
   entries: LeaderboardEntry[];
   currentUserId: string;
+  communityId: string;
+  activeOpponentIds?: string[];
 }) {
   const [search, setSearch] = React.useState("");
   const [sortKey, setSortKey] = React.useState<SortKey>("elo");
+  const activeOpponents = React.useMemo(() => new Set(activeOpponentIds), [activeOpponentIds]);
 
   const filtered = React.useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -74,8 +80,10 @@ export function PlayersBrowser({
           filtered.map((entry, index) => (
             <PlayerRow
               currentUserId={currentUserId}
+              communityId={communityId}
               displayRank={sortKey === "elo" ? entry.rank : index + 1}
               entry={entry}
+              hasActiveChallenge={activeOpponents.has(entry.user_id)}
               key={entry.id}
             />
           ))
@@ -88,37 +96,59 @@ export function PlayersBrowser({
 function PlayerRow({
   entry,
   currentUserId,
+  communityId,
   displayRank,
+  hasActiveChallenge,
 }: {
   entry: LeaderboardEntry;
   currentUserId: string;
+  communityId: string;
   displayRank: number;
+  hasActiveChallenge: boolean;
 }) {
   const isCurrentUser = entry.user_id === currentUserId;
   const winRate = getWinRate(entry);
 
   return (
-    <Link className={`card block p-4 ${isCurrentUser ? "border-orange-200 bg-orange-50" : ""}`} href={`/players/${entry.user_id}`}>
-      <div className="flex items-center gap-3">
-        <span className="w-7 text-sm font-black text-slate-400">#{displayRank}</span>
-        <Avatar name={entry.profile.display_name} src={entry.profile.avatar_url} size={44} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-black">{isCurrentUser ? "You" : entry.profile.display_name}</p>
-          <p className="truncate text-sm text-slate-500">
-            {entry.profile.bio || `${formatRecord(entry.wins, entry.losses)} record`}
-          </p>
+    <article className={`card p-4 ${isCurrentUser ? "outline outline-2 outline-sky-400" : ""}`}>
+      <Link className="block" href={`/players/${entry.user_id}`}>
+        <div className="flex items-center gap-3">
+          <span className="w-7 text-sm font-black text-slate-400">#{displayRank}</span>
+          <Avatar name={entry.profile.display_name} src={entry.profile.avatar_url} size={44} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-black">{isCurrentUser ? "You" : entry.profile.display_name}</p>
+            <p className="truncate text-sm text-slate-500">
+              {entry.profile.bio || `${formatRecord(entry.wins, entry.losses)} record`}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-black text-court">{entry.elo_rating}</p>
+            <p className="text-xs font-semibold text-slate-400">Elo</p>
+          </div>
         </div>
-        <div className="text-right">
-          <p className="font-black text-court">{entry.elo_rating}</p>
-          <p className="text-xs font-semibold text-slate-400">Elo</p>
+        <div className="mt-4 grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-white/70 p-3 text-center">
+          <MiniStat label="Win rate" value={entry.games_played ? `${Math.round(winRate * 100)}%` : "-"} />
+          <MiniStat label="Wins" value={entry.wins} />
+          <MiniStat label="Games" value={entry.games_played} />
         </div>
-      </div>
-      <div className="mt-4 grid grid-cols-3 divide-x divide-slate-200 rounded-xl bg-white/70 p-3 text-center">
-        <MiniStat label="Win rate" value={entry.games_played ? `${Math.round(winRate * 100)}%` : "-"} />
-        <MiniStat label="Wins" value={entry.wins} />
-        <MiniStat label="Games" value={entry.games_played} />
-      </div>
-    </Link>
+      </Link>
+
+      {!isCurrentUser ? (
+        hasActiveChallenge ? (
+          <button className="btn-secondary mt-4 w-full" disabled type="button">
+            Active challenge
+          </button>
+        ) : (
+          <form action={createChallenge} className="mt-4">
+            <input name="community_id" type="hidden" value={communityId} />
+            <input name="challenged_id" type="hidden" value={entry.user_id} />
+            <button className="btn-primary w-full" type="submit">
+              Send challenge
+            </button>
+          </form>
+        )
+      ) : null}
+    </article>
   );
 }
 

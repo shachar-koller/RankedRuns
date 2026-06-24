@@ -12,6 +12,7 @@ export function ProfileSettingsForm({ profile }: { profile: Profile }) {
   const [bio, setBio] = useState(profile.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? "");
   const [file, setFile] = useState<File | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -23,9 +24,9 @@ export function ProfileSettingsForm({ profile }: { profile: Profile }) {
 
     startTransition(async () => {
       const supabase = createClient();
-      let nextAvatarUrl = avatarUrl;
+      let nextAvatarUrl = removeAvatar ? "" : avatarUrl;
 
-      if (file) {
+      if (file && !removeAvatar) {
         if (!file.type.startsWith("image/")) {
           setError("Choose an image file.");
           return;
@@ -35,11 +36,11 @@ export function ProfileSettingsForm({ profile }: { profile: Profile }) {
         const path = `${profile.id}/${Date.now()}-${safeName}`;
         const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, {
           cacheControl: "3600",
-          upsert: false,
+          upsert: true,
         });
 
         if (uploadError) {
-          setError(uploadError.message);
+          setError(getStorageErrorMessage(uploadError.message));
           return;
         }
 
@@ -62,6 +63,8 @@ export function ProfileSettingsForm({ profile }: { profile: Profile }) {
         return;
       }
 
+      setFile(null);
+      setRemoveAvatar(false);
       setMessage("Profile updated.");
       router.refresh();
     });
@@ -71,15 +74,33 @@ export function ProfileSettingsForm({ profile }: { profile: Profile }) {
     <form className="card space-y-4 p-5" onSubmit={saveProfile}>
       <div className="flex items-center gap-4">
         <Avatar name={displayName || profile.display_name} src={avatarUrl} size={64} />
-        <label className="btn-secondary cursor-pointer">
-          Upload photo
-          <input
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            className="sr-only"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            type="file"
-          />
-        </label>
+        <div className="grid gap-2">
+          <label className="btn-secondary cursor-pointer">
+            Upload photo
+            <input
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="sr-only"
+              onChange={(event) => {
+                setFile(event.target.files?.[0] ?? null);
+                setRemoveAvatar(false);
+              }}
+              type="file"
+            />
+          </label>
+          {avatarUrl ? (
+            <button
+              className="min-h-10 px-3 text-sm font-bold text-red-500"
+              onClick={() => {
+                setAvatarUrl("");
+                setFile(null);
+                setRemoveAvatar(true);
+              }}
+              type="button"
+            >
+              Remove photo
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <label>
@@ -98,12 +119,13 @@ export function ProfileSettingsForm({ profile }: { profile: Profile }) {
           className="input mt-1 min-h-28 resize-none leading-6"
           maxLength={180}
           onChange={(event) => setBio(event.target.value)}
-          placeholder="King of Jamaica NY. Send a challenge if you disagree."
+          placeholder="No bio yet"
           value={bio}
         />
       </label>
 
       {file ? <p className="text-xs font-semibold text-slate-500">Selected: {file.name}</p> : null}
+      {removeAvatar ? <p className="text-xs font-semibold text-slate-500">Photo will be removed on save.</p> : null}
       {message ? <p className="text-sm font-bold text-emerald-600">{message}</p> : null}
       {error ? <p className="text-sm font-bold text-red-500">{error}</p> : null}
 
@@ -112,4 +134,12 @@ export function ProfileSettingsForm({ profile }: { profile: Profile }) {
       </button>
     </form>
   );
+}
+
+function getStorageErrorMessage(message: string) {
+  if (message.toLowerCase().includes("bucket not found")) {
+    return "Avatar storage is not set up. Run the Supabase migration that creates the avatars bucket.";
+  }
+
+  return message;
 }

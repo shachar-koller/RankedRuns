@@ -5,6 +5,7 @@ import { PlayerProfileCard } from "@/components/PlayerProfileCard";
 import { RecentResultsList } from "@/components/RecentResultsList";
 import {
   getChallenges,
+  getHeadToHeadStats,
   getLeaderboard,
   getProfileMaybe,
   getRecentResults,
@@ -25,7 +26,9 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
 
   const [{ leaderboard }, challenges, results, profile] = await Promise.all([
     getLeaderboard(supabase, community.id, user.id),
-    getChallenges(supabase, community.id, user.id, { statuses: ["pending", "accepted"] }),
+    getChallenges(supabase, community.id, user.id, {
+      statuses: ["pending", "accepted", "result_pending", "disputed"],
+    }),
     getRecentResults(supabase, community.id, id),
     getProfileMaybe(supabase, id),
   ]);
@@ -40,6 +43,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
       ((challenge.challenger_id === user.id && challenge.challenged_id === id) ||
         (challenge.challenger_id === id && challenge.challenged_id === user.id)),
   );
+  const headToHead = id === user.id ? undefined : await getHeadToHeadStats(supabase, community.id, user.id, id);
 
   return (
     <PageShell>
@@ -52,6 +56,7 @@ export default async function PlayerPage({ params }: { params: Promise<{ id: str
           communityId={community.id}
           currentUserId={user.id}
           hasActiveChallenge={hasActiveChallenge}
+          headToHead={headToHead}
           player={player}
         />
         <RecentResultsList results={results} userId={id} />

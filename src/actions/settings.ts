@@ -107,6 +107,7 @@ export async function createTestAccountAction(
       community_id: communityId,
       user_id: profileId,
       role: "member",
+      status: "active",
     },
     { onConflict: "community_id,user_id" },
   );

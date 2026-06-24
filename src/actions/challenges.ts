@@ -34,6 +34,9 @@ export async function updateChallengeStatus(formData: FormData) {
 
   const challengeId = String(formData.get("challenge_id") ?? "");
   const status = String(formData.get("status") ?? "");
+  if (!["accepted", "declined", "canceled"].includes(status)) {
+    throw new Error("Unsupported challenge status.");
+  }
   const update =
     status === "accepted"
       ? { status, accepted_at: new Date().toISOString() }
@@ -45,16 +48,59 @@ export async function updateChallengeStatus(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
-export async function submitResult(formData: FormData) {
+export async function submitResultReport(formData: FormData) {
   const supabase = await createClient();
   await requireUser(supabase);
 
   const challengeId = String(formData.get("challenge_id") ?? "");
   const winnerId = String(formData.get("winner_id") ?? "");
+  const gameTo = Number(formData.get("game_to"));
+  const loserScore = Number(formData.get("loser_score"));
 
-  const { error } = await supabase.rpc("submit_result", {
+  if (![7, 11, 21].includes(gameTo) || !Number.isInteger(loserScore)) {
+    throw new Error("Enter a valid score.");
+  }
+
+  const { error } = await supabase.rpc("submit_result_report", {
     target_challenge_id: challengeId,
     winner_profile_id: winnerId,
+    winner_score_input: gameTo,
+    loser_score_input: loserScore,
+    game_to_input: gameTo,
+  });
+
+  if (error) throw error;
+
+  revalidatePath("/", "layout");
+  redirect("/challenges");
+}
+
+export async function confirmResultReport(formData: FormData) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const reportId = String(formData.get("result_report_id") ?? "");
+
+  const { error } = await supabase.rpc("confirm_result_report", {
+    target_report_id: reportId,
+  });
+
+  if (error) throw error;
+
+  revalidatePath("/", "layout");
+  redirect("/challenges");
+}
+
+export async function disputeResultReport(formData: FormData) {
+  const supabase = await createClient();
+  await requireUser(supabase);
+
+  const reportId = String(formData.get("result_report_id") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim() || null;
+
+  const { error } = await supabase.rpc("dispute_result_report", {
+    target_report_id: reportId,
+    reason,
   });
 
   if (error) throw error;

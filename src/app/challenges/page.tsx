@@ -22,12 +22,17 @@ export default async function ChallengesPage() {
 
   if (!community) redirect("/onboarding");
 
-  const [activeChallenges, completedChallenges, { leaderboard }] = await Promise.all([
-    getChallenges(supabase, community.id, user.id, { statuses: ["pending", "accepted"] }),
-    getChallenges(supabase, community.id, user.id, { limit: 5, statuses: ["completed"] }),
+  const [activeChallenges, closedChallenges, { leaderboard }] = await Promise.all([
+    getChallenges(supabase, community.id, user.id, {
+      statuses: ["pending", "accepted", "result_pending", "disputed"],
+    }),
+    getChallenges(supabase, community.id, user.id, {
+      limit: 5,
+      statuses: ["completed", "declined", "canceled"],
+    }),
     getLeaderboard(supabase, community.id, user.id),
   ]);
-  const challenges = [...activeChallenges, ...completedChallenges];
+  const challenges = [...activeChallenges, ...closedChallenges];
   const split = splitChallenges(challenges, user.id);
   const activeOpponentIds = new Set(
     activeChallenges
@@ -72,8 +77,26 @@ export default async function ChallengesPage() {
         ))}
       </ChallengeSection>
 
+      <ChallengeSection empty="No results waiting for confirmation." title="Pending results">
+        {split.resultPending.map((challenge) => (
+          <ChallengeCard challenge={challenge} currentUserId={user.id} key={challenge.id} stats={statsByUser} />
+        ))}
+      </ChallengeSection>
+
+      <ChallengeSection empty="No disputed results." title="Disputes">
+        {split.disputed.map((challenge) => (
+          <ChallengeCard challenge={challenge} currentUserId={user.id} key={challenge.id} stats={statsByUser} />
+        ))}
+      </ChallengeSection>
+
       <ChallengeSection empty="No completed matches yet." title="Recently completed">
         {split.completed.slice(0, 5).map((challenge) => (
+          <ChallengeCard challenge={challenge} currentUserId={user.id} key={challenge.id} stats={statsByUser} />
+        ))}
+      </ChallengeSection>
+
+      <ChallengeSection empty="No recently closed challenges." title="Recently closed">
+        {split.closed.slice(0, 5).map((challenge) => (
           <ChallengeCard challenge={challenge} currentUserId={user.id} key={challenge.id} stats={statsByUser} />
         ))}
       </ChallengeSection>

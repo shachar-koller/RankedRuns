@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { updateChallengeStatus } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
-import { timeAgo } from "@/lib/utils";
+import { getChallengeStatusLabel, timeAgo } from "@/lib/utils";
 import type { ChallengeWithPlayers, PlayerStats, Profile } from "@/lib/types";
 
 export function ChallengeCard({
@@ -44,9 +44,27 @@ export function ChallengeCard({
         </Link>
       ) : null}
 
+      {challenge.status === "result_pending" ? (
+        <Link className="btn-secondary mt-4 w-full" href={`/matches/${challenge.id}`}>
+          Review pending result
+        </Link>
+      ) : null}
+
+      {challenge.status === "disputed" ? (
+        <Link className="btn-secondary mt-4 w-full" href={`/matches/${challenge.id}`}>
+          View dispute
+        </Link>
+      ) : null}
+
       {challenge.status === "completed" ? (
         <div className="mt-4 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">
           Completed
+        </div>
+      ) : null}
+
+      {challenge.status === "declined" || challenge.status === "canceled" ? (
+        <div className="mt-4 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600">
+          {getChallengeStatusLabel(challenge.status)}
         </div>
       ) : null}
     </article>

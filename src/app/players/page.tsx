@@ -2,8 +2,9 @@ import { redirect } from "next/navigation";
 import { CommunitySelector } from "@/components/CommunitySelector";
 import { PageShell } from "@/components/PageShell";
 import { PlayersBrowser } from "@/components/PlayersBrowser";
-import { getLeaderboard, getProfilesForUsers, getSelectableCommunity, requireUser } from "@/lib/data";
+import { getChallenges, getLeaderboard, getSelectableCommunity, requireUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
+import { isActiveChallengeStatus } from "@/lib/utils";
 
 export default async function PlayersPage() {
   const supabase = await createClient();
@@ -12,18 +13,17 @@ export default async function PlayersPage() {
 
   if (!community) redirect("/onboarding");
 
-  const { leaderboard } = await getLeaderboard(supabase, community.id, user.id);
-  const profiles = await getProfilesForUsers(
-    supabase,
-    leaderboard.map((entry) => entry.user_id),
-  );
-  const players = leaderboard.map((entry) => ({
-    ...entry,
-    profile: {
-      ...entry.profile,
-      bio: profiles.get(entry.user_id)?.bio ?? null,
-    },
-  }));
+  const [{ leaderboard }, challenges] = await Promise.all([
+    getLeaderboard(supabase, community.id, user.id),
+    getChallenges(supabase, community.id, user.id, {
+      statuses: ["pending", "accepted", "result_pending", "disputed"],
+    }),
+  ]);
+  const activeOpponentIds = challenges
+    .filter((challenge) => isActiveChallengeStatus(challenge.status))
+    .map((challenge) =>
+      challenge.challenger_id === user.id ? challenge.challenged_id : challenge.challenger_id,
+    );
 
   return (
     <PageShell>
@@ -37,7 +37,12 @@ export default async function PlayersPage() {
         </div>
       </div>
 
-      <PlayersBrowser currentUserId={user.id} entries={players} />
+      <PlayersBrowser
+        activeOpponentIds={Array.from(new Set(activeOpponentIds))}
+        communityId={community.id}
+        currentUserId={user.id}
+        entries={leaderboard}
+      />
     </PageShell>
   );
 }

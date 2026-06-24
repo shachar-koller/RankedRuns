@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function CommunitiesPage() {
   const supabase = await createClient();
   const user = await requireUser(supabase);
-  const { memberships, available } = await getCommunitiesForUser(supabase, user.id);
+  const { memberships, pending, available } = await getCommunitiesForUser(supabase, user.id);
 
   return (
     <PageShell>
@@ -31,6 +31,20 @@ export default async function CommunitiesPage() {
           ))
         )}
       </section>
+
+      {pending.length > 0 ? (
+        <section className="mt-8 space-y-3">
+          <h2 className="text-lg font-black">Pending requests</h2>
+          {pending.map((membership) =>
+            membership.communities ? (
+              <div className="card p-4" key={membership.id}>
+                <h3 className="font-bold">{membership.communities.name}</h3>
+                <p className="mt-1 text-sm text-slate-500">Waiting for an admin to approve your request.</p>
+              </div>
+            ) : null,
+          )}
+        </section>
+      ) : null}
 
       <section className="mt-8 space-y-3">
         <h2 className="text-lg font-black">Available to join</h2>

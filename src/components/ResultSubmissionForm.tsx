@@ -1,4 +1,4 @@
-import { submitResult } from "@/actions/challenges";
+import { submitResultReport } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
 import { calculateElo } from "@/lib/elo";
 import type { ChallengeWithPlayers, PlayerStats } from "@/lib/types";
@@ -19,7 +19,7 @@ export function ResultSubmissionForm({
   const challengedWins = calculateElo(challengedElo, challengerElo);
 
   return (
-    <form action={submitResult} className="space-y-5">
+    <form action={submitResultReport} className="space-y-5">
       <input name="challenge_id" type="hidden" value={challenge.id} />
       <div>
         <p className="mb-3 text-center text-sm font-semibold text-slate-500">Who won?</p>
@@ -42,17 +42,37 @@ export function ResultSubmissionForm({
       </div>
 
       <div className="card p-4 text-center">
-        <p className="text-sm font-semibold text-slate-500">Projected Elo change</p>
+        <p className="text-sm font-semibold text-slate-500">Base projected Elo change</p>
         <div className="mt-4 grid grid-cols-2 divide-x divide-slate-200">
           <Projection name={challenge.challenger.display_name} delta={challengerWins.winnerDelta} />
           <Projection name={challenge.challenged.display_name} delta={challengedWins.winnerDelta} />
         </div>
+        <p className="mt-3 text-xs font-semibold text-slate-400">
+          Final Elo also uses the score margin and repeat-match rules.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <label>
+          <span className="label">Game to</span>
+          <select className="input mt-1 font-semibold" name="game_to" required>
+            <option value="7">7</option>
+            <option value="11">11</option>
+            <option value="21">21</option>
+          </select>
+        </label>
+        <label>
+          <span className="label">Loser score</span>
+          <input className="input mt-1" min={0} name="loser_score" required type="number" />
+        </label>
       </div>
 
       <button className="btn-primary w-full" type="submit">
-        Submit result
+        Submit for confirmation
       </button>
-      <p className="text-center text-xs font-semibold text-slate-400">This result is final after submission.</p>
+      <p className="text-center text-xs font-semibold text-slate-400">
+        Rankings update only after the other player confirms the score.
+      </p>
     </form>
   );
 }

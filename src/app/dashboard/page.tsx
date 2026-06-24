@@ -26,10 +26,15 @@ export default async function DashboardPage() {
 
   const [{ leaderboard, current }, challenges] = await Promise.all([
     getLeaderboard(supabase, community.id, user.id),
-    getChallenges(supabase, community.id, user.id, { statuses: ["pending", "accepted"] }),
+    getChallenges(supabase, community.id, user.id, {
+      statuses: ["pending", "accepted", "result_pending", "disputed"],
+    }),
   ]);
   const split = splitChallenges(challenges, user.id);
-  const active = [...split.incoming, ...split.outgoing, ...split.accepted].slice(0, 3);
+  const active = [...split.incoming, ...split.outgoing, ...split.accepted, ...split.resultPending, ...split.disputed].slice(0, 3);
+  const activeOpponentIds = challenges.map((challenge) =>
+    challenge.challenger_id === user.id ? challenge.challenged_id : challenge.challenger_id,
+  );
   const statsByUser = await getStatsForUsers(
     supabase,
     community.id,
@@ -54,7 +59,12 @@ export default async function DashboardPage() {
 
       <div className="space-y-7">
         <CurrentPlayerStatsCard stats={current} />
-        <Leaderboard currentUserId={user.id} entries={leaderboard} />
+        <Leaderboard
+          activeOpponentIds={Array.from(new Set(activeOpponentIds))}
+          communityId={community.id}
+          currentUserId={user.id}
+          entries={leaderboard}
+        />
 
         <section>
           <div className="mb-3 flex items-center justify-between">

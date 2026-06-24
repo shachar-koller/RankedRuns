@@ -1,18 +1,20 @@
 import { createChallenge } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
-import { formatRecord } from "@/lib/utils";
-import type { LeaderboardEntry } from "@/lib/types";
+import { formatRecord, formatWinPercentage } from "@/lib/utils";
+import type { HeadToHeadStats, LeaderboardEntry } from "@/lib/types";
 
 export function PlayerProfileCard({
   player,
   currentUserId,
   communityId,
   hasActiveChallenge,
+  headToHead,
 }: {
   player: LeaderboardEntry;
   currentUserId: string;
   communityId: string;
   hasActiveChallenge: boolean;
+  headToHead?: HeadToHeadStats;
 }) {
   const isSelf = player.user_id === currentUserId;
 
@@ -31,6 +33,15 @@ export function PlayerProfileCard({
         <Stat label="Games" value={player.games_played} />
       </div>
 
+      {!isSelf && headToHead ? (
+        <div className="mt-4 grid grid-cols-4 divide-x divide-slate-200 rounded-2xl border border-slate-200 bg-white p-4">
+          <Stat label="H2H wins" value={headToHead.wins} />
+          <Stat label="H2H losses" value={headToHead.losses} />
+          <Stat label="Games" value={headToHead.totalGames} />
+          <Stat label="Win %" value={formatWinPercentage(headToHead.wins, headToHead.totalGames)} />
+        </div>
+      ) : null}
+
       {isSelf ? (
         <button className="btn-secondary mt-5 w-full" disabled type="button">
           You cannot challenge yourself
@@ -44,7 +55,7 @@ export function PlayerProfileCard({
           <input name="community_id" type="hidden" value={communityId} />
           <input name="challenged_id" type="hidden" value={player.user_id} />
           <button className="btn-primary w-full" type="submit">
-            Challenge player
+            Send challenge
           </button>
         </form>
       )}

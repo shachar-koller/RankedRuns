@@ -44,6 +44,16 @@ export function CreateCommunityForm() {
       </div>
 
       <div>
+        <label className="label" htmlFor="join_policy">
+          Join policy
+        </label>
+        <select className="input mt-1" id="join_policy" name="join_policy" defaultValue="instant">
+          <option value="instant">Instant join</option>
+          <option value="approval_required">Admin approval required</option>
+        </select>
+      </div>
+
+      <div>
         <label className="label" htmlFor="description">
           Description
         </label>

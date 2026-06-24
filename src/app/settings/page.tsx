@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AuthButton } from "@/components/AuthButton";
+import { CommunityAdminPanel } from "@/components/CommunityAdminPanel";
 import { CommunitySelector } from "@/components/CommunitySelector";
+import { FeedbackForm } from "@/components/FeedbackForm";
 import { PageShell } from "@/components/PageShell";
 import { ProfileSettingsForm } from "@/components/ProfileSettingsForm";
-import { getSelectableCommunity, requireUser } from "@/lib/data";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { getCommunityAdminState, getCommunityMemberships, getSelectableCommunity, requireUser } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
@@ -13,6 +16,11 @@ export default async function SettingsPage() {
   const { memberships, community, profile } = await getSelectableCommunity(supabase, user);
 
   if (!community) redirect("/onboarding");
+
+  const adminState = await getCommunityAdminState(supabase, community.id, user.id);
+  const communityMemberships = adminState.isCommunityAdmin
+    ? await getCommunityMemberships(supabase, community.id)
+    : [];
 
   return (
     <PageShell>
@@ -28,6 +36,8 @@ export default async function SettingsPage() {
         <section className="space-y-3">
           <h2 className="text-xl font-black">User settings</h2>
           <ProfileSettingsForm profile={profile} />
+          <ThemeToggle />
+          <FeedbackForm communityId={community.id} />
           <div className="card p-5">
             <h3 className="font-black">Account</h3>
             <p className="mt-1 text-sm text-slate-500">Sign out of Ranked Runs on this device.</p>
@@ -39,6 +49,14 @@ export default async function SettingsPage() {
             </div>
           </div>
         </section>
+        {adminState.isCommunityAdmin ? (
+          <CommunityAdminPanel
+            community={community}
+            currentUserId={user.id}
+            isAppAdmin={adminState.isAppAdmin}
+            memberships={communityMemberships}
+          />
+        ) : null}
       </div>
     </PageShell>
   );

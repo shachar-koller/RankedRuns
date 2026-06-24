@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { PlayerDuel } from "@/components/MatchCard";
 import { ResultSubmissionForm } from "@/components/ResultSubmissionForm";
-import { getChallenge, getSelectableCommunity, getStatsForUsers, requireUser } from "@/lib/data";
+import { ResultReportCard } from "@/components/ResultReportCard";
+import { getChallenge, getResultReportForChallenge, getSelectableCommunity, getStatsForUsers, requireUser } from "@/lib/data";
 import { PageShell } from "@/components/PageShell";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,6 +27,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     challenge.challenger_id,
     challenge.challenged_id,
   ]);
+  const resultReport =
+    challenge.status === "result_pending" || challenge.status === "disputed"
+      ? await getResultReportForChallenge(supabase, challenge.id)
+      : null;
   const challengerStats = statsByUser.get(challenge.challenger_id);
   const challengedStats = statsByUser.get(challenge.challenged_id);
 
@@ -55,6 +60,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
         {challenge.status === "accepted" ? (
           <ResultSubmissionForm challenge={challenge} statsByUser={statsByUser} />
+        ) : resultReport ? (
+          <ResultReportCard currentUserId={user.id} report={resultReport} />
         ) : (
           <div className="card p-4 text-sm text-slate-600">
             Results can only be submitted for accepted matches. Current status:{" "}

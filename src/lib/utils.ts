@@ -5,7 +5,26 @@ export function formatRecord(wins: number, losses: number) {
 }
 
 export function isActiveChallengeStatus(status: ChallengeStatus) {
-  return status === "pending" || status === "accepted";
+  return status === "pending" || status === "accepted" || status === "result_pending" || status === "disputed";
+}
+
+export function getChallengeStatusLabel(status: ChallengeStatus) {
+  const labels: Record<ChallengeStatus, string> = {
+    pending: "Pending",
+    accepted: "Accepted",
+    declined: "Declined",
+    completed: "Completed",
+    canceled: "Canceled",
+    result_pending: "Needs confirmation",
+    disputed: "Disputed",
+  };
+
+  return labels[status];
+}
+
+export function formatWinPercentage(wins: number, totalGames: number) {
+  if (totalGames === 0) return "-";
+  return `${Math.round((wins / totalGames) * 100)}%`;
 }
 
 export function getEmailDomain(email?: string | null) {

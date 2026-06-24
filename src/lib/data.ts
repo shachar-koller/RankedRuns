@@ -5,10 +5,13 @@ import type {
   ChallengeStatus,
   ChallengeWithPlayers,
   Community,
+  HeadToHeadStats,
   LeaderboardEntry,
   Membership,
   PlayerStats,
   Profile,
+  ResultReport,
+  ResultReportWithPlayers,
   ResultWithPlayers,
 } from "@/lib/types";
 
@@ -28,6 +31,9 @@ export async function requireUser(supabase: Client) {
 }
 
 export async function ensureProfile(supabase: Client, user: User) {
+  const existing = await getProfileMaybe(supabase, user.id);
+  if (existing) return existing;
+
   const email = user.email ?? "";
   const displayName =
     user.user_metadata?.full_name ??
@@ -37,7 +43,7 @@ export async function ensureProfile(supabase: Client, user: User) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .upsert(
+    .insert(
       {
         id: user.id,
         email,
@@ -45,7 +51,6 @@ export async function ensureProfile(supabase: Client, user: User) {
         avatar_url: user.user_metadata?.avatar_url ?? null,
         bio: null,
       },
-      { onConflict: "id" },
     )
     .select()
     .single();
@@ -78,12 +83,25 @@ export async function getProfilesForUsers(supabase: Client, userIds: string[]) {
 export async function getMemberships(supabase: Client, userId: string) {
   const { data, error } = await supabase
     .from("community_memberships")
+    .select("*, communities!inner(*)")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .is("communities.archived_at", null)
+    .order("joined_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as Array<Membership & { communities: Community }>;
+}
+
+export async function getMembershipRowsForUser(supabase: Client, userId: string) {
+  const { data, error } = await supabase
+    .from("community_memberships")
     .select("*, communities(*)")
     .eq("user_id", userId)
     .order("joined_at", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as Array<Membership & { communities: Community }>;
+  return (data ?? []) as Array<Membership & { communities: Community | null }>;
 }
 
 export async function getSelectableCommunity(supabase: Client, user: User) {
@@ -106,6 +124,7 @@ async function getAllCommunities(supabase: Client) {
   const { data, error } = await supabase
     .from("communities")
     .select("*")
+    .is("archived_at", null)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
@@ -113,15 +132,22 @@ async function getAllCommunities(supabase: Client) {
 }
 
 export async function getCommunitiesForUser(supabase: Client, userId: string) {
-  const [memberships, communities] = await Promise.all([
+  const [memberships, allMemberships, communities] = await Promise.all([
     getMemberships(supabase, userId),
+    getMembershipRowsForUser(supabase, userId),
     getAllCommunities(supabase),
   ]);
-  const joinedIds = new Set(memberships.map((membership) => membership.community_id));
+  const unavailableIds = new Set(
+    allMemberships
+      .filter((membership) => membership.status === "active" || membership.status === "pending" || membership.status === "banned")
+      .map((membership) => membership.community_id),
+  );
 
   return {
     memberships,
-    available: communities.filter((community) => !joinedIds.has(community.id)),
+    pending: allMemberships.filter((membership) => membership.status === "pending"),
+    unavailable: allMemberships.filter((membership) => membership.status === "banned"),
+    available: communities.filter((community) => !unavailableIds.has(community.id)),
   };
 }
 
@@ -131,16 +157,19 @@ export async function getAvailableCommunities(supabase: Client, userId: string) 
 }
 
 export async function getLeaderboard(supabase: Client, communityId: string, currentUserId?: string) {
-  const { data, error } = await supabase
-    .from("community_player_stats")
-    .select("*, profiles(id, display_name, avatar_url)")
-    .eq("community_id", communityId)
-    .order("elo_rating", { ascending: false })
-    .order("wins", { ascending: false });
+  const [{ data, error }, activeIds] = await Promise.all([
+    supabase
+      .from("community_player_stats")
+      .select("*, profiles(id, display_name, avatar_url, bio)")
+      .eq("community_id", communityId)
+      .order("elo_rating", { ascending: false })
+      .order("wins", { ascending: false }),
+    getActiveMemberIds(supabase, communityId),
+  ]);
 
   if (error) throw error;
 
-  const leaderboard = (data ?? []).map((row, index) => {
+  const leaderboard = (data ?? []).filter((row) => activeIds.has(row.user_id)).map((row, index) => {
     const typedRow = row as PlayerStats & { profiles: Profile };
     return {
       ...typedRow,
@@ -156,6 +185,17 @@ export async function getLeaderboard(supabase: Client, communityId: string, curr
   return { leaderboard: leaderboard as LeaderboardEntry[], current };
 }
 
+export async function getActiveMemberIds(supabase: Client, communityId: string) {
+  const { data, error } = await supabase
+    .from("community_memberships")
+    .select("user_id")
+    .eq("community_id", communityId)
+    .eq("status", "active");
+
+  if (error) throw error;
+  return new Set((data ?? []).map((membership) => membership.user_id as string));
+}
+
 export async function getChallenges(
   supabase: Client,
   communityId: string,
@@ -164,7 +204,9 @@ export async function getChallenges(
 ) {
   let query = supabase
     .from("challenges")
-    .select("*, challenger:profiles!challenges_challenger_id_fkey(id, display_name, avatar_url), challenged:profiles!challenges_challenged_id_fkey(id, display_name, avatar_url)")
+    .select(
+      "*, challenger:profiles!challenges_challenger_id_fkey(id, display_name, avatar_url), challenged:profiles!challenges_challenged_id_fkey(id, display_name, avatar_url), result_reports(*)",
+    )
     .eq("community_id", communityId)
     .or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`)
     .order("created_at", { ascending: false });
@@ -174,18 +216,40 @@ export async function getChallenges(
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as unknown as ChallengeWithPlayers[];
+  return (data ?? []).map(normalizeChallengeResultReport) as ChallengeWithPlayers[];
 }
 
 export async function getChallenge(supabase: Client, challengeId: string) {
   const { data, error } = await supabase
     .from("challenges")
-    .select("*, challenger:profiles!challenges_challenger_id_fkey(id, display_name, avatar_url), challenged:profiles!challenges_challenged_id_fkey(id, display_name, avatar_url)")
+    .select(
+      "*, challenger:profiles!challenges_challenger_id_fkey(id, display_name, avatar_url), challenged:profiles!challenges_challenged_id_fkey(id, display_name, avatar_url), result_reports(*)",
+    )
     .eq("id", challengeId)
     .single();
 
   if (error) throw error;
-  return data as unknown as ChallengeWithPlayers;
+  return normalizeChallengeResultReport(data) as ChallengeWithPlayers;
+}
+
+function normalizeChallengeResultReport(row: any) {
+  const reports = row.result_reports as ResultReport[] | undefined;
+  const [resultReport] = reports ?? [];
+  const { result_reports: _resultReports, ...challenge } = row;
+  return { ...challenge, result_report: resultReport ?? null };
+}
+
+export async function getResultReportForChallenge(supabase: Client, challengeId: string) {
+  const { data, error } = await supabase
+    .from("result_reports")
+    .select(
+      "*, winner:profiles!result_reports_winner_id_fkey(id, display_name, avatar_url), loser:profiles!result_reports_loser_id_fkey(id, display_name, avatar_url), submitter:profiles!result_reports_submitted_by_fkey(id, display_name, avatar_url)",
+    )
+    .eq("challenge_id", challengeId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as unknown as ResultReportWithPlayers | null;
 }
 
 export async function getStatsForUsers(supabase: Client, communityId: string, userIds: string[]) {
@@ -223,6 +287,62 @@ export async function getRecentResults(
   return (data ?? []) as unknown as ResultWithPlayers[];
 }
 
+export async function getHeadToHeadStats(
+  supabase: Client,
+  communityId: string,
+  playerId: string,
+  opponentId: string,
+): Promise<HeadToHeadStats> {
+  const { data, error } = await supabase
+    .from("results")
+    .select("winner_id, loser_id")
+    .eq("community_id", communityId)
+    .or(`winner_id.eq.${playerId},loser_id.eq.${playerId}`);
+
+  if (error) throw error;
+
+  const games = (data ?? []).filter(
+    (result) => result.winner_id === opponentId || result.loser_id === opponentId,
+  );
+  const wins = games.filter((result) => result.winner_id === playerId).length;
+  const totalGames = games.length;
+
+  return {
+    wins,
+    losses: totalGames - wins,
+    totalGames,
+    winPercentage: totalGames === 0 ? 0 : wins / totalGames,
+  };
+}
+
+export async function getCommunityMemberships(supabase: Client, communityId: string) {
+  const { data, error } = await supabase
+    .from("community_memberships")
+    .select("*, profiles(id, display_name, avatar_url, email, bio)")
+    .eq("community_id", communityId)
+    .order("status", { ascending: true })
+    .order("joined_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as Array<Membership & { profiles: Profile }>;
+}
+
+export async function getCommunityAdminState(supabase: Client, communityId: string, userId: string) {
+  const [{ data: isCommunityAdmin, error: communityAdminError }, { data: isAppAdmin, error: appAdminError }] =
+    await Promise.all([
+      supabase.rpc("is_community_admin", { target_community_id: communityId, target_user_id: userId }),
+      supabase.rpc("is_app_admin", { target_user_id: userId }),
+    ]);
+
+  if (communityAdminError) throw communityAdminError;
+  if (appAdminError) throw appAdminError;
+
+  return {
+    isCommunityAdmin: Boolean(isCommunityAdmin),
+    isAppAdmin: Boolean(isAppAdmin),
+  };
+}
+
 export function splitChallenges(challenges: ChallengeWithPlayers[], userId: string) {
   return {
     incoming: challenges.filter(
@@ -232,7 +352,10 @@ export function splitChallenges(challenges: ChallengeWithPlayers[], userId: stri
       (challenge) => challenge.status === "pending" && challenge.challenger_id === userId,
     ),
     accepted: challenges.filter((challenge) => challenge.status === "accepted"),
+    resultPending: challenges.filter((challenge) => challenge.status === "result_pending"),
+    disputed: challenges.filter((challenge) => challenge.status === "disputed"),
     completed: challenges.filter((challenge) => challenge.status === "completed"),
+    closed: challenges.filter((challenge) => challenge.status === "declined" || challenge.status === "canceled"),
   };
 }
 

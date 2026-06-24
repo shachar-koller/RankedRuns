@@ -15,9 +15,9 @@ export function RecentResultsList({ results, userId }: { results: ResultWithPlay
             const delta = result.winner_elo_after - result.winner_elo_before;
             const label = userId
               ? userWon
-                ? `beat ${result.loser.display_name}`
-                : `lost to ${result.winner.display_name}`
-              : `${result.winner.display_name} beat ${result.loser.display_name}`;
+                ? `beat ${result.loser.display_name}${formatScore(result)}`
+                : `lost to ${result.winner.display_name}${formatScore(result)}`
+              : `${result.winner.display_name} beat ${result.loser.display_name}${formatScore(result)}`;
 
             return (
               <div className="flex min-h-16 items-center gap-3 border-b border-slate-100 px-4 last:border-b-0" key={result.id}>
@@ -36,4 +36,9 @@ export function RecentResultsList({ results, userId }: { results: ResultWithPlay
       </div>
     </section>
   );
+}
+
+function formatScore(result: ResultWithPlayers) {
+  if (result.winner_score === null || result.loser_score === null) return "";
+  return ` ${result.winner_score}-${result.loser_score}`;
 }
