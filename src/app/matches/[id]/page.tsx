@@ -35,7 +35,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const challengedStats = statsByUser.get(challenge.challenged_id);
 
   return (
-    <PageShell withNav={false}>
+    <PageShell showSettings={false} withNav={false}>
       <Link className="mb-5 inline-flex items-center gap-1 text-sm font-bold text-slate-600" href="/challenges">
         <ChevronLeft size={18} />
         Challenges

@@ -11,7 +11,7 @@ export default async function OnboardingPage() {
   const { memberships, available: communities } = await getCommunitiesForUser(supabase, user.id);
 
   return (
-    <PageShell withNav={false}>
+    <PageShell showSettings={false} withNav={false}>
       <div className="mb-6">
         <div className="flex items-center gap-2">
           <BrandLogo className="drop-shadow-sm" priority size={44} />

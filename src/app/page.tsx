@@ -11,7 +11,7 @@ export default async function HomePage() {
   const user = configured ? await getCurrentUser(await createClient()) : null;
 
   return (
-    <PageShell withNav={false}>
+    <PageShell showSettings={false} withNav={false}>
       <section className="flex min-h-[calc(100vh-4rem)] flex-col justify-between">
         <div>
           <div className="mb-8 flex items-center">

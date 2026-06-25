@@ -10,7 +10,7 @@ export default async function NewCommunityPage() {
   await requireUser(supabase);
 
   return (
-    <PageShell withNav={false}>
+    <PageShell showSettings={false} withNav={false}>
       <Link className="mb-5 inline-flex items-center gap-1 text-sm font-bold text-slate-600" href="/communities">
         <ChevronLeft size={18} />
         Back
