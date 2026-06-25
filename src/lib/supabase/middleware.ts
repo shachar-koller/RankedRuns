@@ -27,6 +27,26 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user && isProtectedPath(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
   return supabaseResponse;
+}
+
+function isProtectedPath(pathname: string) {
+  return [
+    "/challenges",
+    "/communities",
+    "/dashboard",
+    "/matches",
+    "/onboarding",
+    "/players",
+    "/profile",
+    "/settings",
+  ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }

@@ -17,9 +17,12 @@ export default async function SettingsPage() {
 
   if (!community) redirect("/onboarding");
 
-  const adminState = await getCommunityAdminState(supabase, community.id, user.id);
+  const adminState = await getCommunityAdminState(supabase, community.id, user.id).catch(() => ({
+    isCommunityAdmin: false,
+    isAppAdmin: false,
+  }));
   const communityMemberships = adminState.isCommunityAdmin
-    ? await getCommunityMemberships(supabase, community.id)
+    ? await getCommunityMemberships(supabase, community.id).catch(() => [])
     : [];
 
   return (
