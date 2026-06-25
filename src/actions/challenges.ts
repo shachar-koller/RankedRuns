@@ -57,7 +57,7 @@ export async function submitResultReport(formData: FormData) {
   const gameTo = Number(formData.get("game_to"));
   const loserScore = Number(formData.get("loser_score"));
 
-  if (![7, 11, 21].includes(gameTo) || !Number.isInteger(loserScore)) {
+  if (![7, 11, 21].includes(gameTo) || !Number.isInteger(loserScore) || loserScore < 0 || loserScore >= gameTo) {
     throw new Error("Enter a valid score.");
   }
 

@@ -1,5 +1,6 @@
 import { submitResultReport } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { calculateElo } from "@/lib/elo";
 import type { ChallengeWithPlayers, PlayerStats } from "@/lib/types";
 
@@ -63,13 +64,17 @@ export function ResultSubmissionForm({
         </label>
         <label>
           <span className="label">Loser score</span>
-          <input className="input mt-1" min={0} name="loser_score" required type="number" />
+          <input className="input mt-1" inputMode="numeric" min={0} name="loser_score" placeholder="0" required type="number" />
         </label>
       </div>
 
-      <button className="btn-primary w-full" type="submit">
+      <p className="-mt-2 text-xs font-semibold text-slate-500">
+        Enter the winner's target score and the loser's final score. The loser score must be lower than the game target.
+      </p>
+
+      <FormSubmitButton pendingLabel="Submitting result...">
         Submit for confirmation
-      </button>
+      </FormSubmitButton>
       <p className="text-center text-xs font-semibold text-slate-400">
         Rankings update only after the other player confirms the score.
       </p>

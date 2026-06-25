@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Medal } from "lucide-react";
 import { createChallenge } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { formatRecord } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/lib/types";
 
@@ -89,9 +90,12 @@ export function LeaderboardRow({
         <form action={createChallenge}>
           <input name="community_id" type="hidden" value={communityId} />
           <input name="challenged_id" type="hidden" value={entry.user_id} />
-          <button className="rounded-lg bg-court px-2 py-1.5 text-xs font-bold text-white" type="submit">
+          <FormSubmitButton
+            className="rounded-lg bg-court px-2 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+            pendingLabel="Sending..."
+          >
             Challenge
-          </button>
+          </FormSubmitButton>
         </form>
       )}
     </div>

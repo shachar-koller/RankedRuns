@@ -1,5 +1,6 @@
 import { MapPin, ShieldCheck, UsersRound } from "lucide-react";
 import { switchCommunity } from "@/actions/communities";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { JoinCommunityButton } from "@/components/JoinCommunityButton";
 import type { Community } from "@/lib/types";
 
@@ -43,9 +44,9 @@ export function CommunityCard({ community, joined = false }: { community: Commun
       {joined ? (
         <form action={switchCommunity} className="mt-4">
           <input name="community_id" type="hidden" value={community.id} />
-          <button className="btn-secondary w-full" type="submit">
+          <FormSubmitButton className="btn-secondary w-full" pendingLabel="Switching...">
             Set active
-          </button>
+          </FormSubmitButton>
         </form>
       ) : (
         <JoinCommunityButton

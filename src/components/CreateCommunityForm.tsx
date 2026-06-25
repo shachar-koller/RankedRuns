@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { createCommunity } from "@/actions/communities";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 
 const communityTypes = [
   ["university", "University"],
@@ -10,6 +14,8 @@ const communityTypes = [
 ];
 
 export function CreateCommunityForm() {
+  const [visibility, setVisibility] = useState("public");
+
   return (
     <form action={createCommunity} className="space-y-4">
       <div>
@@ -36,9 +42,15 @@ export function CreateCommunityForm() {
           <label className="label" htmlFor="visibility">
             Visibility
           </label>
-          <select className="input mt-1" id="visibility" name="visibility" defaultValue="public">
+          <select
+            className="input mt-1"
+            id="visibility"
+            name="visibility"
+            onChange={(event) => setVisibility(event.target.value)}
+            value={visibility}
+          >
             <option value="public">Public</option>
-            <option value="domain_restricted">Domain</option>
+            <option value="domain_restricted">Email domain</option>
           </select>
         </div>
       </div>
@@ -51,6 +63,9 @@ export function CreateCommunityForm() {
           <option value="instant">Instant join</option>
           <option value="approval_required">Admin approval required</option>
         </select>
+        <p className="mt-1 text-xs font-semibold text-slate-500">
+          Admin approval lets you review requests before people enter the leaderboard.
+        </p>
       </div>
 
       <div>
@@ -72,16 +87,27 @@ export function CreateCommunityForm() {
         <input className="input mt-1" id="location" name="location" placeholder="New York, NY" />
       </div>
 
-      <div>
-        <label className="label" htmlFor="allowed_email_domain">
-          Allowed email domain
-        </label>
-        <input className="input mt-1" id="allowed_email_domain" name="allowed_email_domain" placeholder="yu.edu" />
-      </div>
+      {visibility === "domain_restricted" ? (
+        <div>
+          <label className="label" htmlFor="allowed_email_domain">
+            Allowed email domain
+          </label>
+          <input
+            className="input mt-1"
+            id="allowed_email_domain"
+            name="allowed_email_domain"
+            placeholder="yu.edu"
+            required
+          />
+          <p className="mt-1 text-xs font-semibold text-slate-500">
+            Members must sign in with this email domain to join.
+          </p>
+        </div>
+      ) : null}
 
-      <button className="btn-primary w-full" type="submit">
+      <FormSubmitButton pendingLabel="Creating community...">
         Create community
-      </button>
+      </FormSubmitButton>
     </form>
   );
 }

@@ -1,5 +1,6 @@
 import { confirmResultReport, disputeResultReport } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { timeAgo } from "@/lib/utils";
 import type { ResultReportWithPlayers } from "@/lib/types";
 
@@ -46,21 +47,28 @@ export function ResultReportCard({
         <div className="mt-4 grid gap-3">
           <form action={confirmResultReport}>
             <input name="result_report_id" type="hidden" value={report.id} />
-            <button className="btn-primary w-full" type="submit">
+            <FormSubmitButton pendingLabel="Confirming score...">
               Confirm score
-            </button>
+            </FormSubmitButton>
           </form>
           <form action={disputeResultReport} className="grid gap-2">
             <input name="result_report_id" type="hidden" value={report.id} />
-            <input
-              className="input"
-              maxLength={180}
-              name="reason"
-              placeholder="Reason, optional"
-            />
-            <button className="btn-secondary w-full" type="submit">
+            <label>
+              <span className="label">Reason, optional</span>
+              <input
+                className="input mt-1"
+                maxLength={180}
+                name="reason"
+                placeholder="Example: score was 11-8, not 11-6"
+              />
+            </label>
+            <FormSubmitButton
+              className="btn-secondary w-full"
+              confirmMessage="Dispute this score? Rankings will stay unchanged until it is resolved."
+              pendingLabel="Disputing score..."
+            >
               Dispute score
-            </button>
+            </FormSubmitButton>
           </form>
         </div>
       ) : null}

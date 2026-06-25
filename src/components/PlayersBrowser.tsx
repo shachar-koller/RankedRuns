@@ -5,6 +5,7 @@ import * as React from "react";
 import { Search } from "lucide-react";
 import { createChallenge } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { formatRecord } from "@/lib/utils";
 import type { LeaderboardEntry } from "@/lib/types";
 
@@ -142,9 +143,9 @@ function PlayerRow({
           <form action={createChallenge} className="mt-4">
             <input name="community_id" type="hidden" value={communityId} />
             <input name="challenged_id" type="hidden" value={entry.user_id} />
-            <button className="btn-primary w-full" type="submit">
+            <FormSubmitButton pendingLabel="Sending challenge...">
               Send challenge
-            </button>
+            </FormSubmitButton>
           </form>
         )
       ) : null}

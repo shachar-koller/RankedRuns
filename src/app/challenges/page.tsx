@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createChallenge } from "@/actions/challenges";
 import { ChallengeCard } from "@/components/ChallengeCard";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { MatchCard } from "@/components/MatchCard";
 import { PageShell } from "@/components/PageShell";
 import {
@@ -117,8 +118,8 @@ function NewChallengeForm({
       <form action={createChallenge} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
         <input name="community_id" type="hidden" value={communityId} />
         <label>
-          <span className="sr-only">Player</span>
-          <select className="input font-semibold" disabled={players.length === 0} name="challenged_id" required>
+          <span className="label">Player</span>
+          <select className="input mt-1 font-semibold" disabled={players.length === 0} name="challenged_id" required>
             {players.length === 0 ? (
               <option>No available players</option>
             ) : (
@@ -133,9 +134,13 @@ function NewChallengeForm({
             )}
           </select>
         </label>
-        <button className="btn-primary w-full sm:w-auto" disabled={players.length === 0} type="submit">
+        <FormSubmitButton
+          className="btn-primary w-full sm:w-auto"
+          disabled={players.length === 0}
+          pendingLabel="Sending challenge..."
+        >
           Send challenge
-        </button>
+        </FormSubmitButton>
       </form>
       {players.length === 0 ? (
         <p className="mt-3 text-sm text-slate-500">

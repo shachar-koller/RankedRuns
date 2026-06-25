@@ -318,7 +318,7 @@ export async function getHeadToHeadStats(
 export async function getCommunityMemberships(supabase: Client, communityId: string) {
   const { data, error } = await supabase
     .from("community_memberships")
-    .select("*, profiles(id, display_name, avatar_url, email, bio)")
+    .select("*, profiles:profiles!community_memberships_user_id_fkey(id, display_name, avatar_url, email, bio)")
     .eq("community_id", communityId)
     .order("status", { ascending: true })
     .order("joined_at", { ascending: true });

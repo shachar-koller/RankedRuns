@@ -5,6 +5,7 @@ import {
   updateMembershipRole,
 } from "@/actions/communities";
 import { Avatar } from "@/components/Avatar";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import type { Community, Membership, Profile } from "@/lib/types";
 
 type MembershipWithProfile = Membership & { profiles: Profile };
@@ -38,9 +39,9 @@ export function CommunityAdminPanel({
             <option value="instant">Instant join</option>
             <option value="approval_required">Approval required</option>
           </select>
-          <button className="btn-secondary w-full sm:w-auto" type="submit">
+          <FormSubmitButton className="btn-secondary w-full sm:w-auto" pendingLabel="Saving...">
             Save
-          </button>
+          </FormSubmitButton>
         </form>
       </div>
 
@@ -58,8 +59,19 @@ export function CommunityAdminPanel({
             pending.map((membership) => (
               <MembershipRow key={membership.id} membership={membership}>
                 <MembershipAction membershipId={membership.id} status="active" label="Approve" primary />
-                <MembershipAction membershipId={membership.id} status="rejected" label="Reject" />
-                <MembershipAction membershipId={membership.id} status="banned" label="Ban" danger />
+                <MembershipAction
+                  membershipId={membership.id}
+                  status="rejected"
+                  label="Reject"
+                  confirmMessage={`Reject ${membership.profiles.display_name}'s request?`}
+                />
+                <MembershipAction
+                  membershipId={membership.id}
+                  status="banned"
+                  label="Ban"
+                  danger
+                  confirmMessage={`Ban ${membership.profiles.display_name} from this community?`}
+                />
               </MembershipRow>
             ))
           )}
@@ -78,8 +90,19 @@ export function CommunityAdminPanel({
                   role={membership.role === "admin" ? "member" : "admin"}
                 />
               ) : null}
-              <MembershipAction membershipId={membership.id} status="removed" label="Remove" />
-              <MembershipAction membershipId={membership.id} status="banned" label="Ban" danger />
+              <MembershipAction
+                membershipId={membership.id}
+                status="removed"
+                label="Remove"
+                confirmMessage={`Remove ${membership.profiles.display_name} from this community?`}
+              />
+              <MembershipAction
+                membershipId={membership.id}
+                status="banned"
+                label="Ban"
+                danger
+                confirmMessage={`Ban ${membership.profiles.display_name} from this community?`}
+              />
             </MembershipRow>
           ))}
         </div>
@@ -95,7 +118,13 @@ export function CommunityAdminPanel({
                   <MembershipAction membershipId={membership.id} status="active" label="Restore" primary />
                 ) : null}
                 {membership.status !== "banned" ? (
-                  <MembershipAction membershipId={membership.id} status="banned" label="Ban" danger />
+                  <MembershipAction
+                    membershipId={membership.id}
+                    status="banned"
+                    label="Ban"
+                    danger
+                    confirmMessage={`Ban ${membership.profiles.display_name} from this community?`}
+                  />
                 ) : null}
               </MembershipRow>
             ))}
@@ -110,9 +139,13 @@ export function CommunityAdminPanel({
         </p>
         <form action={archiveCommunity} className="mt-4">
           <input name="community_id" type="hidden" value={community.id} />
-          <button className="btn-secondary w-full text-red-600" type="submit">
+          <FormSubmitButton
+            className="btn-secondary w-full text-red-600"
+            confirmMessage={`Archive ${community.name}? Members will no longer be able to use it for new challenges.`}
+            pendingLabel="Archiving..."
+          >
             Archive community
-          </button>
+          </FormSubmitButton>
         </form>
       </div>
     </section>
@@ -148,18 +181,20 @@ function MembershipAction({
   label,
   primary = false,
   danger = false,
+  confirmMessage,
 }: {
   membershipId: string;
   status: string;
   label: string;
   primary?: boolean;
   danger?: boolean;
+  confirmMessage?: string;
 }) {
   return (
     <form action={reviewMembership}>
       <input name="membership_id" type="hidden" value={membershipId} />
       <input name="status" type="hidden" value={status} />
-      <button
+      <FormSubmitButton
         className={
           primary
             ? "btn-primary"
@@ -167,10 +202,11 @@ function MembershipAction({
               ? "min-h-10 px-3 text-sm font-bold text-red-500"
               : "btn-secondary"
         }
-        type="submit"
+        confirmMessage={confirmMessage}
+        pendingLabel={getMembershipPendingLabel(label)}
       >
         {label}
-      </button>
+      </FormSubmitButton>
     </form>
   );
 }
@@ -188,9 +224,25 @@ function RoleAction({
     <form action={updateMembershipRole}>
       <input name="membership_id" type="hidden" value={membershipId} />
       <input name="role" type="hidden" value={role} />
-      <button className="btn-secondary" type="submit">
+      <FormSubmitButton
+        className="btn-secondary"
+        confirmMessage={`${label} this member?`}
+        pendingLabel="Updating..."
+      >
         {label}
-      </button>
+      </FormSubmitButton>
     </form>
   );
+}
+
+function getMembershipPendingLabel(label: string) {
+  const labels: Record<string, string> = {
+    Approve: "Approving...",
+    Reject: "Rejecting...",
+    Ban: "Banning...",
+    Remove: "Removing...",
+    Restore: "Restoring...",
+  };
+
+  return labels[label] ?? "Updating...";
 }

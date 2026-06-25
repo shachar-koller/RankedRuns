@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { updateChallengeStatus } from "@/actions/challenges";
 import { Avatar } from "@/components/Avatar";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 import { getChallengeStatusLabel, timeAgo } from "@/lib/utils";
 import type { ChallengeWithPlayers, PlayerStats, Profile } from "@/lib/types";
 
@@ -27,14 +28,25 @@ export function ChallengeCard({
       {challenge.status === "pending" && incoming ? (
         <div className="mt-4 grid grid-cols-2 gap-3">
           <StatusButton challengeId={challenge.id} label="Accept" status="accepted" variant="primary" />
-          <StatusButton challengeId={challenge.id} label="Decline" status="declined" />
+          <StatusButton
+            challengeId={challenge.id}
+            confirmMessage="Decline this challenge?"
+            label="Decline"
+            status="declined"
+          />
         </div>
       ) : null}
 
       {challenge.status === "pending" && !incoming ? (
         <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
           <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-court">Pending</span>
-          <StatusButton challengeId={challenge.id} label="Cancel" status="canceled" textOnly />
+          <StatusButton
+            challengeId={challenge.id}
+            confirmMessage="Cancel this challenge?"
+            label="Cancel"
+            status="canceled"
+            textOnly
+          />
         </div>
       ) : null}
 
@@ -89,23 +101,36 @@ function StatusButton({
   status,
   variant,
   textOnly,
+  confirmMessage,
 }: {
   challengeId: string;
   label: string;
   status: string;
   variant?: "primary";
   textOnly?: boolean;
+  confirmMessage?: string;
 }) {
   return (
     <form action={updateChallengeStatus}>
       <input name="challenge_id" type="hidden" value={challengeId} />
       <input name="status" type="hidden" value={status} />
-      <button
+      <FormSubmitButton
         className={textOnly ? "min-h-10 px-3 text-sm font-bold text-court" : variant === "primary" ? "btn-primary w-full" : "btn-secondary w-full"}
-        type="submit"
+        confirmMessage={confirmMessage}
+        pendingLabel={getPendingLabel(label)}
       >
         {label}
-      </button>
+      </FormSubmitButton>
     </form>
   );
+}
+
+function getPendingLabel(label: string) {
+  const labels: Record<string, string> = {
+    Accept: "Accepting...",
+    Decline: "Declining...",
+    Cancel: "Canceling...",
+  };
+
+  return labels[label] ?? "Working...";
 }

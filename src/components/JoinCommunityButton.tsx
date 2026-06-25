@@ -1,4 +1,5 @@
 import { joinCommunity } from "@/actions/communities";
+import { FormSubmitButton } from "@/components/FormSubmitButton";
 
 export function JoinCommunityButton({
   communityId,
@@ -10,9 +11,9 @@ export function JoinCommunityButton({
   return (
     <form action={joinCommunity} className="mt-4">
       <input name="community_id" type="hidden" value={communityId} />
-      <button className="btn-primary w-full" type="submit">
+      <FormSubmitButton pendingLabel={requiresApproval ? "Sending request..." : "Joining..."}>
         {requiresApproval ? "Request to join" : "Join community"}
-      </button>
+      </FormSubmitButton>
     </form>
   );
 }
